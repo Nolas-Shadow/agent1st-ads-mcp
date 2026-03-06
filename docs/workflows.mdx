@@ -1,0 +1,59 @@
+---
+title: "Workflows"
+description: "Step-by-step sequences for common tasks."
+---
+
+## Launch a Campaign End-to-End
+
+```
+1. check_setup                   confirm license and platform is connected
+2. get_ad_account_info           verify balance is sufficient
+3. create_meta_campaign          build the full campaign — starts PAUSED
+4. enable_meta_campaign          go live
+5. get_meta_campaign_stats       review performance after 24h
+6. update_meta_campaign_budget   scale budget if performing well
+```
+
+---
+
+## Daily Performance Review
+
+```
+1. list_meta_campaigns           get all active campaign IDs
+2. get_meta_campaign_stats       check each one (date_preset: yesterday)
+3. pause_meta_campaign           pause underperformers
+4. update_meta_campaign_budget   increase budget on winners
+```
+
+---
+
+## Launch on Both Platforms
+
+Requires Operator plan or higher.
+
+```
+1. create_meta_campaign          Meta version — starts PAUSED
+2. enable_meta_campaign          activate Meta
+3. create_tiktok_campaign        TikTok version — starts DISABLE
+4. enable_tiktok_campaign        activate TikTok
+```
+
+---
+
+## Scale a Winning Campaign
+
+```
+1. get_meta_campaign_stats (date_preset: last_7d)   confirm strong CTR
+2. update_meta_campaign_budget                       increase the budget
+```
+
+---
+
+## Stop All Spending
+
+```
+1. list_meta_campaigns (status: ACTIVE)   get all live IDs
+2. pause_meta_campaign                    pause each
+3. list_tiktok_campaigns                  get TikTok live IDs
+4. pause_tiktok_campaign                  pause each
+```

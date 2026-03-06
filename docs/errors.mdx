@@ -1,0 +1,64 @@
+---
+title: "Errors & Troubleshooting"
+description: "Common errors and how to fix them fast."
+---
+
+## License Errors
+
+<AccordionGroup>
+  <Accordion title="License required. Get your Agent 1st Ads key...">
+    `AGENT1ST_LICENSE_KEY` is missing from your environment variables.
+
+    **Fix:** Add your key from [agent1st.io/ads](https://agent1st.io/ads/) to your MCP config env block.
+  </Accordion>
+  <Accordion title="Your Scout plan supports one ad platform...">
+    You are trying to use TikTok on a Scout plan, or run both platforms simultaneously.
+
+    **Fix:** Upgrade to Operator ($69/mo) at [agent1st.io/ads](https://agent1st.io/ads/).
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Meta Errors
+
+<AccordionGroup>
+  <Accordion title="Meta API: Invalid OAuth access token (code 190)">
+    Your Meta token has expired. Tokens expire every 60 days.
+
+    **Fix:** Generate a new one at [developers.facebook.com/tools/explorer](https://developers.facebook.com/tools/explorer). Add `ads_management` permission.
+  </Accordion>
+  <Accordion title="META_PAGE_ID is required to create ads">
+    `META_PAGE_ID` is not set.
+
+    **Fix:** Find it on your Facebook Page under About. Add it to your MCP config.
+  </Accordion>
+  <Accordion title="Meta credentials not set">
+    `META_ADS_ACCESS_TOKEN` or `META_ADS_ACCOUNT_ID` is missing.
+
+    **Fix:** Add both to your MCP config environment variables.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## TikTok Errors
+
+<AccordionGroup>
+  <Accordion title="TikTok not connected">
+    `TIKTOK_ADS_ACCESS_TOKEN` or `TIKTOK_ADVERTISER_ID` is missing.
+
+    **Fix:** Add both from your TikTok Ads Manager. Requires Operator plan or higher.
+  </Accordion>
+  <Accordion title="Budget is less than minimum (code 40002)">
+    TikTok requires a minimum $20/day budget.
+
+    **Fix:** Set `budget_usd` to at least 20.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Still Stuck?
+
+Email [Info@Agent1st.io](mailto:Info@Agent1st.io) with your error message.

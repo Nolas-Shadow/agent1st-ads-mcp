@@ -1,0 +1,68 @@
+---
+title: "Quickstart"
+description: "Set up agent1st-ads-mcp in under 5 minutes."
+---
+
+## Step 1 — Get a License Key
+
+<Card title="Get Your Key at agent1st.io/ads" icon="key" href="https://agent1st.io/ads/">
+  Plans start at $29/mo. You will receive a license key after purchase.
+</Card>
+
+| Plan | Price | Platforms |
+|------|-------|-----------|
+| Scout | $29/mo | Meta OR TikTok |
+| Operator | $69/mo | Meta + TikTok |
+| Commander | $149/mo | Meta + TikTok + Advanced |
+| Agency | $399/mo | Unlimited |
+
+---
+
+## Step 2 — Install
+
+```bash
+npx agent1st-ads-mcp
+```
+
+No global install needed. `npx` runs it directly.
+
+---
+
+## Step 3 — Configure Claude Desktop
+
+Open your Claude Desktop config:
+- **Mac:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+Paste this in:
+
+```json
+{
+  "mcpServers": {
+    "agent1st-ads": {
+      "command": "npx",
+      "args": ["agent1st-ads-mcp"],
+      "env": {
+        "AGENT1ST_LICENSE_KEY": "your_license_key",
+        "META_ADS_ACCESS_TOKEN": "your_meta_token",
+        "META_ADS_ACCOUNT_ID": "act_XXXXXXXXXX",
+        "META_PAGE_ID": "XXXXXXXXXX",
+        "TIKTOK_ADS_ACCESS_TOKEN": "your_tiktok_token",
+        "TIKTOK_ADVERTISER_ID": "XXXXXXXXXX"
+      }
+    }
+  }
+}
+```
+
+Restart Claude Desktop after saving.
+
+---
+
+## Step 4 — Verify It Works
+
+Ask your agent:
+
+> "Run check_setup"
+
+You should see your license tier and connected platforms confirmed as ready.

@@ -1,0 +1,103 @@
+---
+title: "TikTok Tools"
+description: "All tools for TikTok ad campaigns."
+---
+
+<Note>Requires Operator plan or higher ($69/mo). Set TIKTOK_ADS_ACCESS_TOKEN and TIKTOK_ADVERTISER_ID.</Note>
+
+---
+
+## list_tiktok_campaigns
+
+List all TikTok campaigns with IDs and status.
+
+```json
+{ "limit": 20 }
+```
+
+---
+
+## create_tiktok_campaign
+
+Create a complete TikTok campaign in one call. Starts DISABLE — call `enable_tiktok_campaign` to go live. Minimum budget $20/day.
+
+```json
+{
+  "name": "Product Launch — TikTok",
+  "objective": "TRAFFIC",
+  "budget_usd": 30,
+  "destination_url": "https://yoursite.com",
+  "ad_text": "This changed everything. Tap to see why.",
+  "targeting_countries": ["US"],
+  "age_groups": ["AGE_18_24", "AGE_25_34"]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "status": "DISABLE",
+  "next_step": "Call enable_tiktok_campaign with campaign_id to go live.",
+  "campaign_id": "1234567890123",
+  "budget_usd": 30
+}
+```
+
+**Objectives:**
+
+| Value | Use When |
+|-------|----------|
+| `TRAFFIC` | Drive website clicks |
+| `LEAD_GENERATION` | Collect leads |
+| `WEBSITE_CONVERSIONS` | Drive purchases |
+| `ENGAGEMENT` | Boost video interactions |
+| `APP_PROMOTION` | App installs |
+
+**Age groups:** `AGE_13_17` `AGE_18_24` `AGE_25_34` `AGE_35_44` `AGE_45_54` `AGE_55_100`
+
+---
+
+## enable_tiktok_campaign
+
+Activate a disabled campaign. It starts running immediately.
+
+```json
+{ "campaign_id": "1234567890123" }
+```
+
+---
+
+## pause_tiktok_campaign
+
+Stop a running campaign. Settings are preserved.
+
+```json
+{ "campaign_id": "1234567890123" }
+```
+
+---
+
+## get_tiktok_campaign_stats
+
+Get impressions, clicks, spend, CTR, CPC, and conversions.
+
+```json
+{
+  "campaign_id": "1234567890123",
+  "start_date": "2025-03-01",
+  "end_date": "2025-03-07"
+}
+```
+
+Omit dates to default to the last 7 days.
+
+---
+
+## update_tiktok_campaign_budget
+
+Change the daily budget. TikTok minimum is $20/day.
+
+```json
+{ "campaign_id": "1234567890123", "budget_usd": 60 }
+```

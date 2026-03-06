@@ -1,0 +1,134 @@
+---
+title: "Meta Tools"
+description: "All tools for Meta (Facebook/Instagram) ad campaigns."
+---
+
+<Note>Requires Scout plan or higher. Set META_ADS_ACCESS_TOKEN, META_ADS_ACCOUNT_ID, and META_PAGE_ID.</Note>
+
+---
+
+## check_setup
+
+Always call this first. Returns your license tier and which platforms are connected.
+
+```json
+{}
+```
+
+---
+
+## get_ad_account_info
+
+Get balance, total spend, currency, and account status.
+
+```json
+{}
+```
+
+---
+
+## list_meta_campaigns
+
+List all campaigns. Returns IDs, names, status, and budgets.
+
+```json
+{
+  "limit": 20,
+  "status": "ACTIVE"
+}
+```
+
+`status` options: `ACTIVE` `PAUSED` `ARCHIVED` — omit to return all.
+
+---
+
+## create_meta_campaign
+
+Create a complete campaign in one call. Starts PAUSED — call `enable_meta_campaign` to go live.
+
+```json
+{
+  "name": "Summer Sale — US",
+  "objective": "OUTCOME_TRAFFIC",
+  "daily_budget_usd": 25,
+  "destination_url": "https://yoursite.com",
+  "ad_headline": "50% Off This Week",
+  "ad_body": "Limited time. Shop now.",
+  "targeting_countries": ["US", "CA"],
+  "age_min": 25,
+  "age_max": 54
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "status": "PAUSED",
+  "next_step": "Call enable_meta_campaign with campaign_id to go live.",
+  "campaign_id": "120210001234567",
+  "daily_budget_usd": 25
+}
+```
+
+**Objectives:**
+
+| Value | Use When |
+|-------|----------|
+| `OUTCOME_TRAFFIC` | Drive website clicks |
+| `OUTCOME_LEADS` | Collect leads |
+| `OUTCOME_SALES` | Drive purchases |
+| `OUTCOME_ENGAGEMENT` | Boost post engagement |
+| `OUTCOME_AWARENESS` | Maximize reach |
+
+---
+
+## enable_meta_campaign
+
+Activate a paused campaign. It starts spending immediately.
+
+```json
+{ "campaign_id": "120210001234567" }
+```
+
+---
+
+## pause_meta_campaign
+
+Stop a live campaign. Settings are preserved.
+
+```json
+{ "campaign_id": "120210001234567" }
+```
+
+---
+
+## get_meta_campaign_stats
+
+Get impressions, clicks, spend, CTR, and CPM.
+
+```json
+{ "campaign_id": "120210001234567", "date_preset": "last_7d" }
+```
+
+**Date presets:** `today` `yesterday` `last_7d` `last_14d` `last_30d` `this_month`
+
+---
+
+## update_meta_campaign_budget
+
+Change the daily budget. Takes effect immediately. Minimum $1/day.
+
+```json
+{ "campaign_id": "120210001234567", "daily_budget_usd": 50 }
+```
+
+---
+
+## delete_meta_campaign
+
+Permanently delete a campaign and all its ads. Cannot be undone.
+
+```json
+{ "campaign_id": "120210001234567" }
+```
