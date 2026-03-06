@@ -1,6 +1,6 @@
 {
   "name": "meta-tiktok-ads-from-agent1st",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP server that lets any AI agent autonomously launch and manage ad campaigns on Meta (Facebook/Instagram) and TikTok — no human in the loop.",
   "keywords": ["mcp", "ads", "meta", "tiktok", "facebook", "instagram", "ai-agent", "agent1st", "advertising", "autonomous", "campaign", "marketing"],
   "author": "Agent 1st <Info@Agent1st.io> (https://agent1st.io)",
@@ -10,7 +10,7 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": { "meta-tiktok-ads-from-agent1st": "dist/index.js" },
-  "files": ["dist", "README.md", ".env.example", "mcp-icon.png"],
+  "files": ["dist", "README.md", "docs", ".env.example", "mcp-icon.png"],
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Agent 1st Ads MCP Server v1.0.0
+ * Agent 1st Ads MCP Server v1.0.1
  * Meta (Facebook/Instagram) + TikTok ad campaign management for AI agents.
  * https://agent1st.io/ads/
  *
@@ -15,9 +15,49 @@ import {
     type Tool,
 } from '@modelcontextprotocol/sdk/types.js';
 
-// ── License Enforcement ───────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 type Tier = 'scout' | 'operator' | 'commander' | 'agency' | 'none';
+
+interface MetaApiError {
+    error: {
+        message: string;
+        code: number;
+    };
+}
+
+interface MetaApiResponse {
+    id?: string;
+    data?: unknown[];
+    error?: MetaApiError['error'];
+    [key: string]: unknown;
+}
+
+interface TikTokApiResponse {
+    code: number;
+    message: string;
+    data?: {
+        campaign_id?: string;
+        adgroup_id?: string;
+        ad_id?: string;
+        list?: unknown[];
+        [key: string]: unknown;
+    };
+}
+
+interface CheckSetupResult {
+    license: { tier: Tier; description: string; valid: boolean };
+    meta: { connected: boolean; account_id?: string; has_page?: boolean; available?: boolean; message?: string };
+    tiktok: { connected: boolean; advertiser_id?: string; available?: boolean; message?: string };
+    ready: boolean;
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const META_MIN_BUDGET_USD = 1;
+const TIKTOK_MIN_BUDGET_USD = 20;
+
+// ── License Enforcement ───────────────────────────────────────────────────────
 
 const TIERS: Record<string, Tier> = {
     'a1s_': 'scout',     // Scout    — $29/mo — 1 platform
@@ -68,58 +108,91 @@ const TIKTOK_API = 'https://business-api.tiktok.com/open_api/v1.3';
 const cfg = {
     metaToken:   () => process.env.META_ADS_ACCESS_TOKEN   || '',
     metaAccount: () => process.env.META_ADS_ACCOUNT_ID     || '',
-    metaPage:    () => process.env.META_PAGE_ID             || '',
-    tikTokToken: () => process.env.TIKTOK_ADS_ACCESS_TOKEN  || '',
-    tikTokAdvId: () => process.env.TIKTOK_ADVERTISER_ID     || '',
+    metaPage:    () => process.env.META_PAGE_ID            || '',
+    tikTokToken: () => process.env.TIKTOK_ADS_ACCESS_TOKEN || '',
+    tikTokAdvId: () => process.env.TIKTOK_ADVERTISER_ID    || '',
     hasMeta:     () => !!(process.env.META_ADS_ACCESS_TOKEN && process.env.META_ADS_ACCOUNT_ID),
     hasTikTok:   () => !!(process.env.TIKTOK_ADS_ACCESS_TOKEN && process.env.TIKTOK_ADVERTISER_ID),
 };
+
+// ── Validation Helpers ────────────────────────────────────────────────────────
+
+function validateMetaBudget(budget: unknown): string | null {
+    if (typeof budget !== 'number' || budget < META_MIN_BUDGET_USD) {
+        return `Meta minimum daily budget is $${META_MIN_BUDGET_USD}/day. Got: $${budget}`;
+    }
+    return null;
+}
+
+function validateTikTokBudget(budget: unknown): string | null {
+    if (typeof budget !== 'number' || budget < TIKTOK_MIN_BUDGET_USD) {
+        return `TikTok minimum daily budget is $${TIKTOK_MIN_BUDGET_USD}/day. Got: $${budget}`;
+    }
+    return null;
+}
+
+function validateUrl(url: unknown): string | null {
+    if (typeof url !== 'string' || !url.startsWith('https://')) {
+        return 'destination_url must start with https://';
+    }
+    return null;
+}
 
 // ── HTTP Helpers ──────────────────────────────────────────────────────────────
 
 function ok(data: unknown): string { return JSON.stringify(data, null, 2); }
 function fail(msg: string): string { return JSON.stringify({ error: true, message: msg }); }
 
-async function metaGet(path: string, params: Record<string, string> = {}): Promise<unknown> {
+async function metaGet(path: string, params: Record<string, string> = {}): Promise<MetaApiResponse> {
     const url = new URL(`${META_API}${path}`);
     url.searchParams.set('access_token', cfg.metaToken());
     for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-    const json = await (await fetch(url.toString())).json() as any;
+    const response = await fetch(url.toString());
+    const json = await response.json() as MetaApiResponse;
     if (json.error) throw new Error(`Meta API: ${json.error.message} (code ${json.error.code})`);
     return json;
 }
 
-async function metaPost(path: string, body: Record<string, unknown>): Promise<unknown> {
+async function metaPost(path: string, body: Record<string, unknown>): Promise<MetaApiResponse> {
     const url = new URL(`${META_API}${path}`);
     url.searchParams.set('access_token', cfg.metaToken());
-    const json = await (await fetch(url.toString(), {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-    })).json() as any;
+    const response = await fetch(url.toString(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+    const json = await response.json() as MetaApiResponse;
     if (json.error) throw new Error(`Meta API: ${json.error.message} (code ${json.error.code})`);
     return json;
 }
 
-async function metaDelete(path: string): Promise<unknown> {
+async function metaDelete(path: string): Promise<MetaApiResponse> {
     const url = new URL(`${META_API}${path}`);
     url.searchParams.set('access_token', cfg.metaToken());
-    const json = await (await fetch(url.toString(), { method: 'DELETE' })).json() as any;
+    const response = await fetch(url.toString(), { method: 'DELETE' });
+    const json = await response.json() as MetaApiResponse;
     if (json.error) throw new Error(`Meta API: ${json.error.message} (code ${json.error.code})`);
     return json;
 }
 
-async function tikTokGet(path: string, params: Record<string, string> = {}): Promise<unknown> {
+async function tikTokGet(path: string, params: Record<string, string> = {}): Promise<TikTokApiResponse> {
     const url = new URL(`${TIKTOK_API}${path}`);
     for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-    const json = await (await fetch(url.toString(), { headers: { 'Access-Token': cfg.tikTokToken() } })).json() as any;
+    const response = await fetch(url.toString(), {
+        headers: { 'Access-Token': cfg.tikTokToken() }
+    });
+    const json = await response.json() as TikTokApiResponse;
     if (json.code !== 0) throw new Error(`TikTok API: ${json.message} (code ${json.code})`);
     return json;
 }
 
-async function tikTokPost(path: string, body: Record<string, unknown>): Promise<unknown> {
-    const json = await (await fetch(`${TIKTOK_API}${path}`, {
-        method: 'POST', headers: { 'Access-Token': cfg.tikTokToken(), 'Content-Type': 'application/json' },
+async function tikTokPost(path: string, body: Record<string, unknown>): Promise<TikTokApiResponse> {
+    const response = await fetch(`${TIKTOK_API}${path}`, {
+        method: 'POST',
+        headers: { 'Access-Token': cfg.tikTokToken(), 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
-    })).json() as any;
+    });
+    const json = await response.json() as TikTokApiResponse;
     if (json.code !== 0) throw new Error(`TikTok API: ${json.message} (code ${json.code})`);
     return json;
 }
@@ -305,7 +378,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
                 agency:    'Agency ($399/mo) — Unlimited',
                 none:      'No license — purchase at https://agent1st.io/ads/',
             };
-            return ok({
+            const result: CheckSetupResult = {
                 license: { tier, description: tierLabels[tier], valid: tier !== 'none' },
                 meta: cfg.hasMeta()
                     ? { connected: true, account_id: cfg.metaAccount(), has_page: !!cfg.metaPage(), available: tier !== 'none' }
@@ -314,7 +387,8 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
                     ? { connected: true, advertiser_id: cfg.tikTokAdvId(), available: tier !== 'none' && tier !== 'scout' }
                     : { connected: false, message: 'Set TIKTOK_ADS_ACCESS_TOKEN, TIKTOK_ADVERTISER_ID' },
                 ready: tier !== 'none' && (cfg.hasMeta() || cfg.hasTikTok()),
-            });
+            };
+            return ok(result);
         }
 
         case 'get_ad_account_info': {
@@ -358,10 +432,18 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
             if (!args.name || !args.daily_budget_usd || !args.destination_url || !args.ad_headline || !args.ad_body)
                 return fail('Required: name, daily_budget_usd, destination_url, ad_headline, ad_body');
 
+            // Validate budget
+            const budgetError = validateMetaBudget(args.daily_budget_usd);
+            if (budgetError) return fail(budgetError);
+
+            // Validate URL
+            const urlError = validateUrl(args.destination_url);
+            if (urlError) return fail(urlError);
+
             const campaignRes = await metaPost(`/${cfg.metaAccount()}/campaigns`, {
                 name: args.name, objective: args.objective || 'OUTCOME_TRAFFIC',
                 status: 'PAUSED', special_ad_categories: [],
-            }) as any;
+            });
 
             const adSetRes = await metaPost(`/${cfg.metaAccount()}/adsets`, {
                 name: `${args.name} — Ad Set`, campaign_id: campaignRes.id,
@@ -373,7 +455,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
                     age_max: (args.age_max as number) || 65,
                 },
                 status: 'PAUSED',
-            }) as any;
+            });
 
             const creativeRes = await metaPost(`/${cfg.metaAccount()}/adcreatives`, {
                 name: `${args.name} — Creative`,
@@ -384,12 +466,12 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
                         call_to_action: { type: 'LEARN_MORE', value: { link: args.destination_url } },
                     },
                 },
-            }) as any;
+            });
 
             const adRes = await metaPost(`/${cfg.metaAccount()}/ads`, {
                 name: `${args.name} — Ad`, adset_id: adSetRes.id,
                 creative: { creative_id: creativeRes.id }, status: 'PAUSED',
-            }) as any;
+            });
 
             return ok({
                 success: true, status: 'PAUSED',
@@ -438,6 +520,11 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
             const denied = licenseCheck('meta');
             if (denied) return fail(denied);
             if (!args.campaign_id || !args.daily_budget_usd) return fail('campaign_id and daily_budget_usd required.');
+
+            // Validate budget
+            const budgetError = validateMetaBudget(args.daily_budget_usd);
+            if (budgetError) return fail(budgetError);
+
             await metaPost(`/${args.campaign_id}`, { daily_budget: Math.round((args.daily_budget_usd as number) * 100) });
             return ok({ success: true, campaign_id: args.campaign_id, new_daily_budget_usd: args.daily_budget_usd });
         }
@@ -460,12 +547,20 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
             if (!args.name || !args.budget_usd || !args.destination_url || !args.ad_text)
                 return fail('Required: name, budget_usd, destination_url, ad_text');
 
+            // Validate budget
+            const budgetError = validateTikTokBudget(args.budget_usd);
+            if (budgetError) return fail(budgetError);
+
+            // Validate URL
+            const urlError = validateUrl(args.destination_url);
+            if (urlError) return fail(urlError);
+
             const campaignRes = await tikTokPost('/campaign/create/', {
                 advertiser_id: cfg.tikTokAdvId(), campaign_name: args.name,
                 objective_type: args.objective || 'TRAFFIC',
                 budget_mode: 'BUDGET_MODE_DAY', budget: args.budget_usd, operation_status: 'DISABLE',
-            }) as any;
-            const campaignId = campaignRes.data.campaign_id;
+            });
+            const campaignId = campaignRes.data?.campaign_id;
 
             const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
             const adGroupRes = await tikTokPost('/adgroup/create/', {
@@ -476,13 +571,13 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
                 schedule_type: 'SCHEDULE_START_END', schedule_start_time: `${today} 00:00:00`,
                 schedule_end_time: '20380101 00:00:00', optimization_goal: 'CLICK',
                 billing_event: 'CPC', operation_status: 'DISABLE',
-            }) as any;
+            });
 
             const adRes = await tikTokPost('/ad/create/', {
-                advertiser_id: cfg.tikTokAdvId(), adgroup_id: adGroupRes.data.adgroup_id,
+                advertiser_id: cfg.tikTokAdvId(), adgroup_id: adGroupRes.data?.adgroup_id,
                 ad_name: `${args.name} — Ad`, ad_text: args.ad_text,
                 landing_page_url: args.destination_url, call_to_action: 'LEARN_MORE', operation_status: 'DISABLE',
-            }) as any;
+            });
 
             return ok({
                 success: true, status: 'DISABLE',
@@ -533,6 +628,11 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
             const denied = licenseCheck('tiktok');
             if (denied) return fail(denied);
             if (!args.campaign_id || !args.budget_usd) return fail('campaign_id and budget_usd required.');
+
+            // Validate budget
+            const budgetError = validateTikTokBudget(args.budget_usd);
+            if (budgetError) return fail(budgetError);
+
             await tikTokPost('/campaign/update/', {
                 advertiser_id: cfg.tikTokAdvId(), campaign_id: args.campaign_id,
                 budget: args.budget_usd, budget_mode: 'BUDGET_MODE_DAY',
@@ -543,15 +643,16 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         default:
             return fail(`Unknown tool: ${name}`);
         }
-    } catch (e: any) {
-        return fail(e.message);
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        return fail(message);
     }
 }
 
 // ── MCP Server ────────────────────────────────────────────────────────────────
 
 const server = new Server(
-    { name: 'meta-tiktok-ads-from-agent1st', version: '1.0.0' },
+    { name: 'meta-tiktok-ads-from-agent1st', version: '1.0.1' },
     { capabilities: { tools: {} } }
 );
 
