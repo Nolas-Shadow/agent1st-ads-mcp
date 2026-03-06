@@ -12,7 +12,7 @@
   "bin": { "meta-tiktok-ads-from-agent1st": "dist/index.js" },
   "files": ["dist", "README.md", ".env.example", "mcp-icon.png"],
   "scripts": {
-    "build": "tsc && chmod +x dist/index.js",
+    "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "prepublishOnly": "npm run build"
