@@ -28,34 +28,63 @@ No global install needed. `npx` runs it directly.
 
 ---
 
-## Step 3 — Configure Claude Desktop
+## Step 3 — Add to Your Agent
 
-Open your Claude Desktop config:
-- **Mac:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+Add this to your MCP config. The location depends on your client:
 
-Paste this in:
+<Tabs>
+  <Tab title="Claude Desktop">
+    **Mac:** `~/Library/Application Support/Claude/claude_desktop_config.json`
 
-```json
-{
-  "mcpServers": {
-    "agent1st-ads": {
-      "command": "npx",
-      "args": ["meta-tiktok-ads-from-agent1st"],
-      "env": {
-        "AGENT1ST_LICENSE_KEY": "your_license_key",
-        "META_ADS_ACCESS_TOKEN": "your_meta_token",
-        "META_ADS_ACCOUNT_ID": "act_XXXXXXXXXX",
-        "META_PAGE_ID": "XXXXXXXXXX",
-        "TIKTOK_ADS_ACCESS_TOKEN": "your_tiktok_token",
-        "TIKTOK_ADVERTISER_ID": "XXXXXXXXXX"
+    **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+    ```json
+    {
+      "mcpServers": {
+        "agent1st-ads": {
+          "command": "npx",
+          "args": ["meta-tiktok-ads-from-agent1st"],
+          "env": {
+            "AGENT1ST_LICENSE_KEY": "your_license_key",
+            "META_ADS_ACCESS_TOKEN": "your_meta_token",
+            "META_ADS_ACCOUNT_ID": "act_XXXXXXXXXX",
+            "META_PAGE_ID": "XXXXXXXXXX",
+            "TIKTOK_ADS_ACCESS_TOKEN": "your_tiktok_token",
+            "TIKTOK_ADVERTISER_ID": "XXXXXXXXXX"
+          }
+        }
       }
     }
-  }
-}
-```
+    ```
 
-Restart Claude Desktop after saving.
+    Restart Claude Desktop after saving.
+  </Tab>
+  <Tab title="Cursor">
+    Open **Settings → MCP** and add:
+
+    ```json
+    {
+      "mcpServers": {
+        "agent1st-ads": {
+          "command": "npx",
+          "args": ["meta-tiktok-ads-from-agent1st"],
+          "env": {
+            "AGENT1ST_LICENSE_KEY": "your_license_key",
+            "META_ADS_ACCESS_TOKEN": "your_meta_token",
+            "META_ADS_ACCOUNT_ID": "act_XXXXXXXXXX",
+            "META_PAGE_ID": "XXXXXXXXXX",
+            "TIKTOK_ADS_ACCESS_TOKEN": "your_tiktok_token",
+            "TIKTOK_ADVERTISER_ID": "XXXXXXXXXX"
+          }
+        }
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="Windsurf">
+    Open **Settings → MCP Servers** and add the same config block as above.
+  </Tab>
+</Tabs>
 
 ---
 
