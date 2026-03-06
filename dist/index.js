@@ -538,7 +538,7 @@ async function handleTool(name, args) {
     }
 }
 // ── MCP Server ────────────────────────────────────────────────────────────────
-const server = new Server({ name: 'agent1st-ads-mcp', version: '1.0.0' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'meta-tiktok-ads-from-agent1st', version: '1.0.0' }, { capabilities: { tools: {} } });
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args = {} } = request.params;

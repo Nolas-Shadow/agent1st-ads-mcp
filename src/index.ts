@@ -551,7 +551,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
 // ── MCP Server ────────────────────────────────────────────────────────────────
 
 const server = new Server(
-    { name: 'agent1st-ads-mcp', version: '1.0.0' },
+    { name: 'meta-tiktok-ads-from-agent1st', version: '1.0.0' },
     { capabilities: { tools: {} } }
 );
 

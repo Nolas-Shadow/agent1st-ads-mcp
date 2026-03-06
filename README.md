@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/agent1st/agent1st-ads-mcp/main/mcp-icon.png" alt="Agent 1st Ads MCP" width="120" />
 </p>
 
-# agent1st-ads-mcp
+# meta-tiktok-ads-from-agent1st
 
 **Launch and manage Meta (Facebook/Instagram) and TikTok ad campaigns in seconds — from any AI agent.**
 
@@ -31,13 +31,13 @@ Works with Meta (Facebook + Instagram) and TikTok. Connect one or both.
 ### Step 1 — Install
 
 ```bash
-npm install -g agent1st-ads-mcp
+npm install -g meta-tiktok-ads-from-agent1st
 ```
 
 Or run without installing:
 
 ```bash
-npx agent1st-ads-mcp
+npx meta-tiktok-ads-from-agent1st
 ```
 
 ### Step 2 — Get Your Credentials
@@ -79,7 +79,7 @@ You can connect Meta only, TikTok only, or both.
   "mcpServers": {
     "agent1st-ads": {
       "command": "npx",
-      "args": ["agent1st-ads-mcp"],
+      "args": ["meta-tiktok-ads-from-agent1st"],
       "env": {
         "META_ADS_ACCESS_TOKEN": "your_token",
         "META_ADS_ACCOUNT_ID": "act_XXXXXXXXXX",
