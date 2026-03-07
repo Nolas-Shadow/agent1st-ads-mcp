@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Agent 1st Ads MCP Server v1.0.0
+ * Agent 1st Ads MCP Server v1.0.1
  * Meta (Facebook/Instagram) + TikTok ad campaign management for AI agents.
  * https://agent1st.io/ads/
  *
@@ -9,11 +9,15 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema, } from '@modelcontextprotocol/sdk/types.js';
+// ── Constants ─────────────────────────────────────────────────────────────────
+const META_MIN_BUDGET_USD = 1;
+const TIKTOK_MIN_BUDGET_USD = 20;
+// ── License Enforcement ───────────────────────────────────────────────────────
 const TIERS = {
-    'a1s_': 'scout', // Scout    — $29/mo — 1 platform
-    'a1o_': 'operator', // Operator — $69/mo — both platforms
-    'a1c_': 'commander', // Commander— $149/mo — both + advanced
-    'a1a_': 'agency', // Agency   — $399/mo — unlimited
+    'a1s_': 'starter', // Starter  — $29/mo — 1 platform
+    'a1o_': 'pro', // Pro      — $69/mo — both platforms
+    'a1c_': 'premium', // Premium  — $149/mo — both + advanced
+    'a1a_': 'elite', // Elite    — $399/mo — unlimited
 };
 function getLicenseTier() {
     const key = process.env.AGENT1ST_LICENSE_KEY || '';
@@ -29,25 +33,25 @@ function tierAllows(tier, feature) {
     if (tier === 'none')
         return false;
     if (feature === 'both')
-        return tier !== 'scout';
-    // Scout can use Meta OR TikTok — whichever is configured, not both simultaneously
-    if (tier === 'scout' && feature === 'tiktok' && cfg.hasMeta())
+        return tier !== 'starter';
+    // Starter can use Meta OR TikTok — whichever is configured, not both simultaneously
+    if (tier === 'starter' && feature === 'tiktok' && cfg.hasMeta())
         return false;
     return true;
 }
 const NO_LICENSE = 'License required. Get your Agent 1st Ads key at https://agent1st.io/ads/ — plans from $29/mo.\n' +
     'Set AGENT1ST_LICENSE_KEY=<your-key> in your environment variables.';
-const SCOUT_UPGRADE = 'Your Scout plan ($29/mo) supports one ad platform. ' +
-    'Upgrade to Operator ($69/mo) or higher to run both Meta and TikTok. ' +
+const STARTER_UPGRADE = 'Your Starter plan ($29/mo) supports one ad platform. ' +
+    'Upgrade to Pro ($69/mo) or higher to run both Meta and TikTok. ' +
     'Upgrade at https://agent1st.io/ads/';
 function licenseCheck(platform) {
     const tier = getLicenseTier();
     if (tier === 'none')
         return NO_LICENSE;
     if (platform === 'meta' && !tierAllows(tier, 'meta'))
-        return SCOUT_UPGRADE;
+        return STARTER_UPGRADE;
     if (platform === 'tiktok' && !tierAllows(tier, 'tiktok'))
-        return SCOUT_UPGRADE;
+        return STARTER_UPGRADE;
     return null; // licensed — proceed
 }
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -62,6 +66,25 @@ const cfg = {
     hasMeta: () => !!(process.env.META_ADS_ACCESS_TOKEN && process.env.META_ADS_ACCOUNT_ID),
     hasTikTok: () => !!(process.env.TIKTOK_ADS_ACCESS_TOKEN && process.env.TIKTOK_ADVERTISER_ID),
 };
+// ── Validation Helpers ────────────────────────────────────────────────────────
+function validateMetaBudget(budget) {
+    if (typeof budget !== 'number' || budget < META_MIN_BUDGET_USD) {
+        return `Meta minimum daily budget is $${META_MIN_BUDGET_USD}/day. Got: $${budget}`;
+    }
+    return null;
+}
+function validateTikTokBudget(budget) {
+    if (typeof budget !== 'number' || budget < TIKTOK_MIN_BUDGET_USD) {
+        return `TikTok minimum daily budget is $${TIKTOK_MIN_BUDGET_USD}/day. Got: $${budget}`;
+    }
+    return null;
+}
+function validateUrl(url) {
+    if (typeof url !== 'string' || !url.startsWith('https://')) {
+        return 'destination_url must start with https://';
+    }
+    return null;
+}
 // ── HTTP Helpers ──────────────────────────────────────────────────────────────
 function ok(data) { return JSON.stringify(data, null, 2); }
 function fail(msg) { return JSON.stringify({ error: true, message: msg }); }
@@ -70,7 +93,8 @@ async function metaGet(path, params = {}) {
     url.searchParams.set('access_token', cfg.metaToken());
     for (const [k, v] of Object.entries(params))
         url.searchParams.set(k, v);
-    const json = await (await fetch(url.toString())).json();
+    const response = await fetch(url.toString());
+    const json = await response.json();
     if (json.error)
         throw new Error(`Meta API: ${json.error.message} (code ${json.error.code})`);
     return json;
@@ -78,9 +102,12 @@ async function metaGet(path, params = {}) {
 async function metaPost(path, body) {
     const url = new URL(`${META_API}${path}`);
     url.searchParams.set('access_token', cfg.metaToken());
-    const json = await (await fetch(url.toString(), {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-    })).json();
+    const response = await fetch(url.toString(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+    const json = await response.json();
     if (json.error)
         throw new Error(`Meta API: ${json.error.message} (code ${json.error.code})`);
     return json;
@@ -88,7 +115,8 @@ async function metaPost(path, body) {
 async function metaDelete(path) {
     const url = new URL(`${META_API}${path}`);
     url.searchParams.set('access_token', cfg.metaToken());
-    const json = await (await fetch(url.toString(), { method: 'DELETE' })).json();
+    const response = await fetch(url.toString(), { method: 'DELETE' });
+    const json = await response.json();
     if (json.error)
         throw new Error(`Meta API: ${json.error.message} (code ${json.error.code})`);
     return json;
@@ -97,16 +125,21 @@ async function tikTokGet(path, params = {}) {
     const url = new URL(`${TIKTOK_API}${path}`);
     for (const [k, v] of Object.entries(params))
         url.searchParams.set(k, v);
-    const json = await (await fetch(url.toString(), { headers: { 'Access-Token': cfg.tikTokToken() } })).json();
+    const response = await fetch(url.toString(), {
+        headers: { 'Access-Token': cfg.tikTokToken() }
+    });
+    const json = await response.json();
     if (json.code !== 0)
         throw new Error(`TikTok API: ${json.message} (code ${json.code})`);
     return json;
 }
 async function tikTokPost(path, body) {
-    const json = await (await fetch(`${TIKTOK_API}${path}`, {
-        method: 'POST', headers: { 'Access-Token': cfg.tikTokToken(), 'Content-Type': 'application/json' },
+    const response = await fetch(`${TIKTOK_API}${path}`, {
+        method: 'POST',
+        headers: { 'Access-Token': cfg.tikTokToken(), 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
-    })).json();
+    });
+    const json = await response.json();
     if (json.code !== 0)
         throw new Error(`TikTok API: ${json.message} (code ${json.code})`);
     return json;
@@ -115,7 +148,7 @@ async function tikTokPost(path, body) {
 const TOOLS = [
     {
         name: 'check_setup',
-        description: 'ALWAYS call this first. Verifies license tier and which ad platforms are connected. Shows what is available based on your plan (Scout/Operator/Commander/Agency). Use this before any other tool.',
+        description: 'ALWAYS call this first. Verifies license tier and which ad platforms are connected. Shows what is available based on your plan (Starter/Pro/Premium/Elite). Use this before any other tool.',
         inputSchema: { type: 'object', properties: {}, required: [] },
     },
     {
@@ -125,7 +158,7 @@ const TOOLS = [
     },
     {
         name: 'list_meta_campaigns',
-        description: 'List all campaigns in the Meta (Facebook/Instagram) ad account with campaign ID, name, status (ACTIVE/PAUSED/ARCHIVED), objective, and daily budget. Use campaign IDs to get stats, adjust budgets, or pause/enable. Requires Scout plan or higher.',
+        description: 'List all campaigns in the Meta (Facebook/Instagram) ad account with campaign ID, name, status (ACTIVE/PAUSED/ARCHIVED), objective, and daily budget. Use campaign IDs to get stats, adjust budgets, or pause/enable. Requires Starter plan or higher.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -137,7 +170,7 @@ const TOOLS = [
     },
     {
         name: 'create_meta_campaign',
-        description: 'Create a complete Meta (Facebook/Instagram) ad campaign in one call — campaign + ad set with targeting + creative + ad. Created in PAUSED state. Call enable_meta_campaign to activate. Minimum budget $1/day. Requires Scout plan or higher.',
+        description: 'Create a complete Meta (Facebook/Instagram) ad campaign in one call — campaign + ad set with targeting + creative + ad. Created in PAUSED state. Call enable_meta_campaign to activate. Minimum budget $1/day. Requires Starter plan or higher.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -156,7 +189,7 @@ const TOOLS = [
     },
     {
         name: 'enable_meta_campaign',
-        description: 'Activate a paused Meta campaign so it starts spending. Use campaign_id from create_meta_campaign or list_meta_campaigns. Requires Scout plan or higher.',
+        description: 'Activate a paused Meta campaign so it starts spending. Use campaign_id from create_meta_campaign or list_meta_campaigns. Requires Starter plan or higher.',
         inputSchema: {
             type: 'object',
             properties: { campaign_id: { type: 'string', description: 'Meta campaign ID to activate.' } },
@@ -165,7 +198,7 @@ const TOOLS = [
     },
     {
         name: 'pause_meta_campaign',
-        description: 'Pause a live Meta campaign to stop all spending immediately. Campaign and settings are preserved — use enable_meta_campaign to resume. Requires Scout plan or higher.',
+        description: 'Pause a live Meta campaign to stop all spending immediately. Campaign and settings are preserved — use enable_meta_campaign to resume. Requires Starter plan or higher.',
         inputSchema: {
             type: 'object',
             properties: { campaign_id: { type: 'string', description: 'Meta campaign ID to pause.' } },
@@ -174,7 +207,7 @@ const TOOLS = [
     },
     {
         name: 'get_meta_campaign_stats',
-        description: 'Get performance metrics for a Meta campaign: impressions, clicks, spend (USD), CTR, CPM, and conversions. Use to evaluate performance before budget decisions. Requires Scout plan or higher.',
+        description: 'Get performance metrics for a Meta campaign: impressions, clicks, spend (USD), CTR, CPM, and conversions. Use to evaluate performance before budget decisions. Requires Starter plan or higher.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -186,7 +219,7 @@ const TOOLS = [
     },
     {
         name: 'update_meta_campaign_budget',
-        description: 'Change the daily budget of a Meta campaign. Takes effect immediately. Increase to scale a winning campaign, decrease to throttle spend. Minimum $1/day. Requires Scout plan or higher.',
+        description: 'Change the daily budget of a Meta campaign. Takes effect immediately. Increase to scale a winning campaign, decrease to throttle spend. Minimum $1/day. Requires Starter plan or higher.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -198,7 +231,7 @@ const TOOLS = [
     },
     {
         name: 'delete_meta_campaign',
-        description: 'Permanently delete a Meta campaign and all its ad sets and ads. Cannot be undone. Use pause_meta_campaign to stop spending temporarily. Requires Scout plan or higher.',
+        description: 'Permanently delete a Meta campaign and all its ad sets and ads. Cannot be undone. Use pause_meta_campaign to stop spending temporarily. Requires Starter plan or higher.',
         inputSchema: {
             type: 'object',
             properties: { campaign_id: { type: 'string', description: 'Meta campaign ID to permanently delete.' } },
@@ -207,7 +240,7 @@ const TOOLS = [
     },
     {
         name: 'list_tiktok_campaigns',
-        description: 'List all campaigns in the TikTok ad account with campaign ID, name, status, objective, and budget. Requires Operator plan or higher ($69/mo).',
+        description: 'List all campaigns in the TikTok ad account with campaign ID, name, status, objective, and budget. Requires Pro plan or higher ($69/mo).',
         inputSchema: {
             type: 'object',
             properties: { limit: { type: 'number', description: 'Max campaigns to return. Default: 20.' } },
@@ -216,7 +249,7 @@ const TOOLS = [
     },
     {
         name: 'create_tiktok_campaign',
-        description: 'Create a complete TikTok ad campaign in one call — campaign + ad group with targeting + ad. Created in DISABLE state. Call enable_tiktok_campaign to activate. TikTok minimum budget is $20/day. Requires Operator plan or higher ($69/mo).',
+        description: 'Create a complete TikTok ad campaign in one call — campaign + ad group with targeting + ad. Created in DISABLE state. Call enable_tiktok_campaign to activate. TikTok minimum budget is $20/day. Requires Pro plan or higher ($69/mo).',
         inputSchema: {
             type: 'object',
             properties: {
@@ -233,7 +266,7 @@ const TOOLS = [
     },
     {
         name: 'enable_tiktok_campaign',
-        description: 'Activate a disabled TikTok campaign so it starts running. Requires Operator plan or higher ($69/mo).',
+        description: 'Activate a disabled TikTok campaign so it starts running. Requires Pro plan or higher ($69/mo).',
         inputSchema: {
             type: 'object',
             properties: { campaign_id: { type: 'string', description: 'TikTok campaign ID to enable.' } },
@@ -242,7 +275,7 @@ const TOOLS = [
     },
     {
         name: 'pause_tiktok_campaign',
-        description: 'Pause a running TikTok campaign to stop all spending. Settings preserved — use enable_tiktok_campaign to resume. Requires Operator plan or higher ($69/mo).',
+        description: 'Pause a running TikTok campaign to stop all spending. Settings preserved — use enable_tiktok_campaign to resume. Requires Pro plan or higher ($69/mo).',
         inputSchema: {
             type: 'object',
             properties: { campaign_id: { type: 'string', description: 'TikTok campaign ID to pause.' } },
@@ -251,7 +284,7 @@ const TOOLS = [
     },
     {
         name: 'get_tiktok_campaign_stats',
-        description: 'Get performance metrics for a TikTok campaign: impressions, clicks, spend, CTR, CPC, conversions. Requires Operator plan or higher ($69/mo).',
+        description: 'Get performance metrics for a TikTok campaign: impressions, clicks, spend, CTR, CPC, conversions. Requires Pro plan or higher ($69/mo).',
         inputSchema: {
             type: 'object',
             properties: {
@@ -264,7 +297,7 @@ const TOOLS = [
     },
     {
         name: 'update_tiktok_campaign_budget',
-        description: 'Change the daily budget of a TikTok campaign. TikTok minimum is $20/day. Requires Operator plan or higher ($69/mo).',
+        description: 'Change the daily budget of a TikTok campaign. TikTok minimum is $20/day. Requires Pro plan or higher ($69/mo).',
         inputSchema: {
             type: 'object',
             properties: {
@@ -282,22 +315,23 @@ async function handleTool(name, args) {
             case 'check_setup': {
                 const tier = getLicenseTier();
                 const tierLabels = {
-                    scout: 'Scout ($29/mo) — Meta OR TikTok',
-                    operator: 'Operator ($69/mo) — Meta + TikTok',
-                    commander: 'Commander ($149/mo) — Meta + TikTok + Advanced',
-                    agency: 'Agency ($399/mo) — Unlimited',
+                    starter: 'Starter ($29/mo) — Meta OR TikTok',
+                    pro: 'Pro ($69/mo) — Meta + TikTok',
+                    premium: 'Premium ($149/mo) — Meta + TikTok + Advanced',
+                    elite: 'Elite ($399/mo) — Unlimited',
                     none: 'No license — purchase at https://agent1st.io/ads/',
                 };
-                return ok({
+                const result = {
                     license: { tier, description: tierLabels[tier], valid: tier !== 'none' },
                     meta: cfg.hasMeta()
                         ? { connected: true, account_id: cfg.metaAccount(), has_page: !!cfg.metaPage(), available: tier !== 'none' }
                         : { connected: false, message: 'Set META_ADS_ACCESS_TOKEN, META_ADS_ACCOUNT_ID, META_PAGE_ID' },
                     tiktok: cfg.hasTikTok()
-                        ? { connected: true, advertiser_id: cfg.tikTokAdvId(), available: tier !== 'none' && tier !== 'scout' }
+                        ? { connected: true, advertiser_id: cfg.tikTokAdvId(), available: tier !== 'none' && tier !== 'starter' }
                         : { connected: false, message: 'Set TIKTOK_ADS_ACCESS_TOKEN, TIKTOK_ADVERTISER_ID' },
                     ready: tier !== 'none' && (cfg.hasMeta() || cfg.hasTikTok()),
-                });
+                };
+                return ok(result);
             }
             case 'get_ad_account_info': {
                 const denied = licenseCheck();
@@ -310,14 +344,14 @@ async function handleTool(name, args) {
                         fields: 'name,account_status,currency,balance,amount_spent,spend_cap,timezone_name',
                     });
                 }
-                if (cfg.hasTikTok() && tier !== 'scout') {
+                if (cfg.hasTikTok() && tier !== 'starter') {
                     results.tiktok = await tikTokGet('/advertiser/info/', {
                         advertiser_id: cfg.tikTokAdvId(),
                         fields: '["name","status","currency","balance","timezone"]',
                     });
                 }
-                else if (tier === 'scout') {
-                    results.tiktok = { message: 'TikTok requires Operator plan or higher. Upgrade at https://agent1st.io/ads/' };
+                else if (tier === 'starter') {
+                    results.tiktok = { message: 'TikTok requires Pro plan or higher. Upgrade at https://agent1st.io/ads/' };
                 }
                 return ok(results);
             }
@@ -345,6 +379,14 @@ async function handleTool(name, args) {
                     return fail('META_PAGE_ID required to create ads.');
                 if (!args.name || !args.daily_budget_usd || !args.destination_url || !args.ad_headline || !args.ad_body)
                     return fail('Required: name, daily_budget_usd, destination_url, ad_headline, ad_body');
+                // Validate budget
+                const budgetError = validateMetaBudget(args.daily_budget_usd);
+                if (budgetError)
+                    return fail(budgetError);
+                // Validate URL
+                const urlError = validateUrl(args.destination_url);
+                if (urlError)
+                    return fail(urlError);
                 const campaignRes = await metaPost(`/${cfg.metaAccount()}/campaigns`, {
                     name: args.name, objective: args.objective || 'OUTCOME_TRAFFIC',
                     status: 'PAUSED', special_ad_categories: [],
@@ -426,6 +468,10 @@ async function handleTool(name, args) {
                     return fail(denied);
                 if (!args.campaign_id || !args.daily_budget_usd)
                     return fail('campaign_id and daily_budget_usd required.');
+                // Validate budget
+                const budgetError = validateMetaBudget(args.daily_budget_usd);
+                if (budgetError)
+                    return fail(budgetError);
                 await metaPost(`/${args.campaign_id}`, { daily_budget: Math.round(args.daily_budget_usd * 100) });
                 return ok({ success: true, campaign_id: args.campaign_id, new_daily_budget_usd: args.daily_budget_usd });
             }
@@ -449,12 +495,20 @@ async function handleTool(name, args) {
                     return fail('TikTok credentials not set.');
                 if (!args.name || !args.budget_usd || !args.destination_url || !args.ad_text)
                     return fail('Required: name, budget_usd, destination_url, ad_text');
+                // Validate budget
+                const budgetError = validateTikTokBudget(args.budget_usd);
+                if (budgetError)
+                    return fail(budgetError);
+                // Validate URL
+                const urlError = validateUrl(args.destination_url);
+                if (urlError)
+                    return fail(urlError);
                 const campaignRes = await tikTokPost('/campaign/create/', {
                     advertiser_id: cfg.tikTokAdvId(), campaign_name: args.name,
                     objective_type: args.objective || 'TRAFFIC',
                     budget_mode: 'BUDGET_MODE_DAY', budget: args.budget_usd, operation_status: 'DISABLE',
                 });
-                const campaignId = campaignRes.data.campaign_id;
+                const campaignId = campaignRes.data?.campaign_id;
                 const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
                 const adGroupRes = await tikTokPost('/adgroup/create/', {
                     advertiser_id: cfg.tikTokAdvId(), campaign_id: campaignId,
@@ -466,7 +520,7 @@ async function handleTool(name, args) {
                     billing_event: 'CPC', operation_status: 'DISABLE',
                 });
                 const adRes = await tikTokPost('/ad/create/', {
-                    advertiser_id: cfg.tikTokAdvId(), adgroup_id: adGroupRes.data.adgroup_id,
+                    advertiser_id: cfg.tikTokAdvId(), adgroup_id: adGroupRes.data?.adgroup_id,
                     ad_name: `${args.name} — Ad`, ad_text: args.ad_text,
                     landing_page_url: args.destination_url, call_to_action: 'LEARN_MORE', operation_status: 'DISABLE',
                 });
@@ -523,6 +577,10 @@ async function handleTool(name, args) {
                     return fail(denied);
                 if (!args.campaign_id || !args.budget_usd)
                     return fail('campaign_id and budget_usd required.');
+                // Validate budget
+                const budgetError = validateTikTokBudget(args.budget_usd);
+                if (budgetError)
+                    return fail(budgetError);
                 await tikTokPost('/campaign/update/', {
                     advertiser_id: cfg.tikTokAdvId(), campaign_id: args.campaign_id,
                     budget: args.budget_usd, budget_mode: 'BUDGET_MODE_DAY',
@@ -534,11 +592,12 @@ async function handleTool(name, args) {
         }
     }
     catch (e) {
-        return fail(e.message);
+        const message = e instanceof Error ? e.message : String(e);
+        return fail(message);
     }
 }
 // ── MCP Server ────────────────────────────────────────────────────────────────
-const server = new Server({ name: 'meta-tiktok-ads-from-agent1st', version: '1.0.0' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'meta-tiktok-ads-from-agent1st', version: '1.0.1' }, { capabilities: { tools: {} } });
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args = {} } = request.params;

@@ -17,7 +17,7 @@ import {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Tier = 'scout' | 'operator' | 'commander' | 'agency' | 'none';
+type Tier = 'starter' | 'pro' | 'premium' | 'elite' | 'none';
 
 interface MetaApiError {
     error: {
@@ -60,10 +60,10 @@ const TIKTOK_MIN_BUDGET_USD = 20;
 // ── License Enforcement ───────────────────────────────────────────────────────
 
 const TIERS: Record<string, Tier> = {
-    'a1s_': 'scout',     // Scout    — $29/mo — 1 platform
-    'a1o_': 'operator',  // Operator — $69/mo — both platforms
-    'a1c_': 'commander', // Commander— $149/mo — both + advanced
-    'a1a_': 'agency',    // Agency   — $399/mo — unlimited
+    'a1s_': 'starter',  // Starter  — $29/mo — 1 platform
+    'a1o_': 'pro',      // Pro      — $69/mo — both platforms
+    'a1c_': 'premium',  // Premium  — $149/mo — both + advanced
+    'a1a_': 'elite',    // Elite    — $399/mo — unlimited
 };
 
 function getLicenseTier(): Tier {
@@ -77,9 +77,9 @@ function getLicenseTier(): Tier {
 
 function tierAllows(tier: Tier, feature: 'meta' | 'tiktok' | 'both'): boolean {
     if (tier === 'none') return false;
-    if (feature === 'both') return tier !== 'scout';
-    // Scout can use Meta OR TikTok — whichever is configured, not both simultaneously
-    if (tier === 'scout' && feature === 'tiktok' && cfg.hasMeta()) return false;
+    if (feature === 'both') return tier !== 'starter';
+    // Starter can use Meta OR TikTok — whichever is configured, not both simultaneously
+    if (tier === 'starter' && feature === 'tiktok' && cfg.hasMeta()) return false;
     return true;
 }
 
@@ -87,16 +87,16 @@ const NO_LICENSE =
     'License required. Get your Agent 1st Ads key at https://agent1st.io/ads/ — plans from $29/mo.\n' +
     'Set AGENT1ST_LICENSE_KEY=<your-key> in your environment variables.';
 
-const SCOUT_UPGRADE =
-    'Your Scout plan ($29/mo) supports one ad platform. ' +
-    'Upgrade to Operator ($69/mo) or higher to run both Meta and TikTok. ' +
+const STARTER_UPGRADE =
+    'Your Starter plan ($29/mo) supports one ad platform. ' +
+    'Upgrade to Pro ($69/mo) or higher to run both Meta and TikTok. ' +
     'Upgrade at https://agent1st.io/ads/';
 
 function licenseCheck(platform?: 'meta' | 'tiktok'): string | null {
     const tier = getLicenseTier();
     if (tier === 'none') return NO_LICENSE;
-    if (platform === 'meta' && !tierAllows(tier, 'meta')) return SCOUT_UPGRADE;
-    if (platform === 'tiktok' && !tierAllows(tier, 'tiktok')) return SCOUT_UPGRADE;
+    if (platform === 'meta' && !tierAllows(tier, 'meta')) return STARTER_UPGRADE;
+    if (platform === 'tiktok' && !tierAllows(tier, 'tiktok')) return STARTER_UPGRADE;
     return null; // licensed — proceed
 }
 
@@ -202,7 +202,7 @@ async function tikTokPost(path: string, body: Record<string, unknown>): Promise<
 const TOOLS: Tool[] = [
     {
         name: 'check_setup',
-        description: 'ALWAYS call this first. Verifies license tier and which ad platforms are connected. Shows what is available based on your plan (Scout/Operator/Commander/Agency). Use this before any other tool.',
+        description: 'ALWAYS call this first. Verifies license tier and which ad platforms are connected. Shows what is available based on your plan (Starter/Pro/Premium/Elite). Use this before any other tool.',
         inputSchema: { type: 'object', properties: {}, required: [] },
     },
     {
@@ -212,7 +212,7 @@ const TOOLS: Tool[] = [
     },
     {
         name: 'list_meta_campaigns',
-        description: 'List all campaigns in the Meta (Facebook/Instagram) ad account with campaign ID, name, status (ACTIVE/PAUSED/ARCHIVED), objective, and daily budget. Use campaign IDs to get stats, adjust budgets, or pause/enable. Requires Scout plan or higher.',
+        description: 'List all campaigns in the Meta (Facebook/Instagram) ad account with campaign ID, name, status (ACTIVE/PAUSED/ARCHIVED), objective, and daily budget. Use campaign IDs to get stats, adjust budgets, or pause/enable. Requires Starter plan or higher.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -224,7 +224,7 @@ const TOOLS: Tool[] = [
     },
     {
         name: 'create_meta_campaign',
-        description: 'Create a complete Meta (Facebook/Instagram) ad campaign in one call — campaign + ad set with targeting + creative + ad. Created in PAUSED state. Call enable_meta_campaign to activate. Minimum budget $1/day. Requires Scout plan or higher.',
+        description: 'Create a complete Meta (Facebook/Instagram) ad campaign in one call — campaign + ad set with targeting + creative + ad. Created in PAUSED state. Call enable_meta_campaign to activate. Minimum budget $1/day. Requires Starter plan or higher.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -243,7 +243,7 @@ const TOOLS: Tool[] = [
     },
     {
         name: 'enable_meta_campaign',
-        description: 'Activate a paused Meta campaign so it starts spending. Use campaign_id from create_meta_campaign or list_meta_campaigns. Requires Scout plan or higher.',
+        description: 'Activate a paused Meta campaign so it starts spending. Use campaign_id from create_meta_campaign or list_meta_campaigns. Requires Starter plan or higher.',
         inputSchema: {
             type: 'object',
             properties: { campaign_id: { type: 'string', description: 'Meta campaign ID to activate.' } },
@@ -252,7 +252,7 @@ const TOOLS: Tool[] = [
     },
     {
         name: 'pause_meta_campaign',
-        description: 'Pause a live Meta campaign to stop all spending immediately. Campaign and settings are preserved — use enable_meta_campaign to resume. Requires Scout plan or higher.',
+        description: 'Pause a live Meta campaign to stop all spending immediately. Campaign and settings are preserved — use enable_meta_campaign to resume. Requires Starter plan or higher.',
         inputSchema: {
             type: 'object',
             properties: { campaign_id: { type: 'string', description: 'Meta campaign ID to pause.' } },
@@ -261,7 +261,7 @@ const TOOLS: Tool[] = [
     },
     {
         name: 'get_meta_campaign_stats',
-        description: 'Get performance metrics for a Meta campaign: impressions, clicks, spend (USD), CTR, CPM, and conversions. Use to evaluate performance before budget decisions. Requires Scout plan or higher.',
+        description: 'Get performance metrics for a Meta campaign: impressions, clicks, spend (USD), CTR, CPM, and conversions. Use to evaluate performance before budget decisions. Requires Starter plan or higher.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -273,7 +273,7 @@ const TOOLS: Tool[] = [
     },
     {
         name: 'update_meta_campaign_budget',
-        description: 'Change the daily budget of a Meta campaign. Takes effect immediately. Increase to scale a winning campaign, decrease to throttle spend. Minimum $1/day. Requires Scout plan or higher.',
+        description: 'Change the daily budget of a Meta campaign. Takes effect immediately. Increase to scale a winning campaign, decrease to throttle spend. Minimum $1/day. Requires Starter plan or higher.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -285,7 +285,7 @@ const TOOLS: Tool[] = [
     },
     {
         name: 'delete_meta_campaign',
-        description: 'Permanently delete a Meta campaign and all its ad sets and ads. Cannot be undone. Use pause_meta_campaign to stop spending temporarily. Requires Scout plan or higher.',
+        description: 'Permanently delete a Meta campaign and all its ad sets and ads. Cannot be undone. Use pause_meta_campaign to stop spending temporarily. Requires Starter plan or higher.',
         inputSchema: {
             type: 'object',
             properties: { campaign_id: { type: 'string', description: 'Meta campaign ID to permanently delete.' } },
@@ -294,7 +294,7 @@ const TOOLS: Tool[] = [
     },
     {
         name: 'list_tiktok_campaigns',
-        description: 'List all campaigns in the TikTok ad account with campaign ID, name, status, objective, and budget. Requires Operator plan or higher ($69/mo).',
+        description: 'List all campaigns in the TikTok ad account with campaign ID, name, status, objective, and budget. Requires Pro plan or higher ($69/mo).',
         inputSchema: {
             type: 'object',
             properties: { limit: { type: 'number', description: 'Max campaigns to return. Default: 20.' } },
@@ -303,7 +303,7 @@ const TOOLS: Tool[] = [
     },
     {
         name: 'create_tiktok_campaign',
-        description: 'Create a complete TikTok ad campaign in one call — campaign + ad group with targeting + ad. Created in DISABLE state. Call enable_tiktok_campaign to activate. TikTok minimum budget is $20/day. Requires Operator plan or higher ($69/mo).',
+        description: 'Create a complete TikTok ad campaign in one call — campaign + ad group with targeting + ad. Created in DISABLE state. Call enable_tiktok_campaign to activate. TikTok minimum budget is $20/day. Requires Pro plan or higher ($69/mo).',
         inputSchema: {
             type: 'object',
             properties: {
@@ -320,7 +320,7 @@ const TOOLS: Tool[] = [
     },
     {
         name: 'enable_tiktok_campaign',
-        description: 'Activate a disabled TikTok campaign so it starts running. Requires Operator plan or higher ($69/mo).',
+        description: 'Activate a disabled TikTok campaign so it starts running. Requires Pro plan or higher ($69/mo).',
         inputSchema: {
             type: 'object',
             properties: { campaign_id: { type: 'string', description: 'TikTok campaign ID to enable.' } },
@@ -329,7 +329,7 @@ const TOOLS: Tool[] = [
     },
     {
         name: 'pause_tiktok_campaign',
-        description: 'Pause a running TikTok campaign to stop all spending. Settings preserved — use enable_tiktok_campaign to resume. Requires Operator plan or higher ($69/mo).',
+        description: 'Pause a running TikTok campaign to stop all spending. Settings preserved — use enable_tiktok_campaign to resume. Requires Pro plan or higher ($69/mo).',
         inputSchema: {
             type: 'object',
             properties: { campaign_id: { type: 'string', description: 'TikTok campaign ID to pause.' } },
@@ -338,7 +338,7 @@ const TOOLS: Tool[] = [
     },
     {
         name: 'get_tiktok_campaign_stats',
-        description: 'Get performance metrics for a TikTok campaign: impressions, clicks, spend, CTR, CPC, conversions. Requires Operator plan or higher ($69/mo).',
+        description: 'Get performance metrics for a TikTok campaign: impressions, clicks, spend, CTR, CPC, conversions. Requires Pro plan or higher ($69/mo).',
         inputSchema: {
             type: 'object',
             properties: {
@@ -351,7 +351,7 @@ const TOOLS: Tool[] = [
     },
     {
         name: 'update_tiktok_campaign_budget',
-        description: 'Change the daily budget of a TikTok campaign. TikTok minimum is $20/day. Requires Operator plan or higher ($69/mo).',
+        description: 'Change the daily budget of a TikTok campaign. TikTok minimum is $20/day. Requires Pro plan or higher ($69/mo).',
         inputSchema: {
             type: 'object',
             properties: {
@@ -372,11 +372,11 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         case 'check_setup': {
             const tier = getLicenseTier();
             const tierLabels: Record<Tier, string> = {
-                scout:     'Scout ($29/mo) — Meta OR TikTok',
-                operator:  'Operator ($69/mo) — Meta + TikTok',
-                commander: 'Commander ($149/mo) — Meta + TikTok + Advanced',
-                agency:    'Agency ($399/mo) — Unlimited',
-                none:      'No license — purchase at https://agent1st.io/ads/',
+                starter: 'Starter ($29/mo) — Meta OR TikTok',
+                pro:     'Pro ($69/mo) — Meta + TikTok',
+                premium: 'Premium ($149/mo) — Meta + TikTok + Advanced',
+                elite:   'Elite ($399/mo) — Unlimited',
+                none:    'No license — purchase at https://agent1st.io/ads/',
             };
             const result: CheckSetupResult = {
                 license: { tier, description: tierLabels[tier], valid: tier !== 'none' },
@@ -384,7 +384,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
                     ? { connected: true, account_id: cfg.metaAccount(), has_page: !!cfg.metaPage(), available: tier !== 'none' }
                     : { connected: false, message: 'Set META_ADS_ACCESS_TOKEN, META_ADS_ACCOUNT_ID, META_PAGE_ID' },
                 tiktok: cfg.hasTikTok()
-                    ? { connected: true, advertiser_id: cfg.tikTokAdvId(), available: tier !== 'none' && tier !== 'scout' }
+                    ? { connected: true, advertiser_id: cfg.tikTokAdvId(), available: tier !== 'none' && tier !== 'starter' }
                     : { connected: false, message: 'Set TIKTOK_ADS_ACCESS_TOKEN, TIKTOK_ADVERTISER_ID' },
                 ready: tier !== 'none' && (cfg.hasMeta() || cfg.hasTikTok()),
             };
@@ -401,13 +401,13 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
                     fields: 'name,account_status,currency,balance,amount_spent,spend_cap,timezone_name',
                 });
             }
-            if (cfg.hasTikTok() && tier !== 'scout') {
+            if (cfg.hasTikTok() && tier !== 'starter') {
                 results.tiktok = await tikTokGet('/advertiser/info/', {
                     advertiser_id: cfg.tikTokAdvId(),
                     fields: '["name","status","currency","balance","timezone"]',
                 });
-            } else if (tier === 'scout') {
-                results.tiktok = { message: 'TikTok requires Operator plan or higher. Upgrade at https://agent1st.io/ads/' };
+            } else if (tier === 'starter') {
+                results.tiktok = { message: 'TikTok requires Pro plan or higher. Upgrade at https://agent1st.io/ads/' };
             }
             return ok(results);
         }
