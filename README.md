@@ -2,6 +2,8 @@
 
 MCP server that lets AI agents launch and manage Meta + TikTok ad campaigns autonomously.
 
+[![agent1st-ads-mcp MCP server](https://glama.ai/mcp/servers/Nolas-Shadow/agent1st-ads-mcp/badges/card.svg)](https://glama.ai/mcp/servers/Nolas-Shadow/agent1st-ads-mcp)
+
 ## Features
 
 - **One-call campaign creation**: No complex API setup. Just call the MCP tool.
