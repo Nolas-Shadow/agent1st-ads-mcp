@@ -1,5 +1,7 @@
 # Agent 1st Ads MCP
 
+[![smithery badge](https://smithery.ai/badge/agent1st-ads-mcp/Nolas-Shadow)](https://smithery.ai/servers/agent1st-ads-mcp/Nolas-Shadow)
+
 MCP server that lets AI agents launch and manage Meta + TikTok ad campaigns autonomously.
 
 ## Features
